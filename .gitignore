@@ -1,0 +1,7 @@
+.envrc
+.direnv
+config.lua
+
+# Added by cargo
+
+/target

@@ -1,0 +1,54 @@
+headerbar box {
+	background: #33333399;
+	border: none;
+	box-shadow: none;
+}
+
+.launcher-background {
+    background-image: url("default-background.png");
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+.settings {
+	background: #333333ff;
+	border-radius: 12px;
+	padding: 15px;
+}
+
+.launch-button {
+	margin: 0px 15px 30px 0px;
+}
+.launch-button label {
+	margin: 8px 50px;
+}
+
+.settings-button {
+	margin: 0px 200px 30px 0px;
+}
+.settings-button label {
+	margin: 8px 8px;
+}
+
+.game-title {
+	font-size: 40px;
+	margin: 8px 50px;
+    text-shadow: 3px 3px 7px rgba(0,0,0,0.7);
+	margin: 250px 100px 20px 0px;
+}
+
+.space-8 {
+	margin: 8px;
+}
+
+.bg-blue {
+    background-image: linear-gradient(0deg, #117799, #1173bb);
+}
+
+.primary-font-size {
+	font-size: 40px;
+}
+.secondary-font-size {
+	font-size: 32px;
+}
