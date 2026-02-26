@@ -1,21 +1,36 @@
 use gtk4::{
-    Box, Button, Label, ListView, SignalListItemFactory, SingleSelection, Stack,
+    Box, Button, Label, ListView, SignalListItemFactory, SingleSelection,
+    gio::prelude::ListModelExt,
     glib::{BoxedAnyObject, object::Cast},
-    prelude::{BoxExt, ButtonExt, ListItemExt, WidgetExt},
+    prelude::{BoxExt, ButtonExt, ListItemExt},
 };
-use rusqlite::{Connection, Error};
 use std::rc::Rc;
 
-use crate::{constants::ADD_GAME_FORM_STACK, db::game::Game};
+use crate::{
+    constants::{ADD_GAME_FORM_STACK, LAUNCHER_STACK},
+    db::game::Game,
+    ui::AppController,
+};
 
 pub struct UiLauncher {
-    stack: Rc<Stack>,
-    conn: Rc<Connection>,
+    title: Rc<Label>,
+    app_controller: Rc<AppController>,
 }
 
 impl UiLauncher {
-    pub fn new(stack: Rc<Stack>, conn: Rc<Connection>) -> UiLauncher {
-        UiLauncher { stack, conn }
+    pub fn new(app_controller: Rc<AppController>) -> UiLauncher {
+        UiLauncher {
+            title: Rc::new(
+                Label::builder()
+                    .label("Game Title")
+                    .css_classes(["game-title"])
+                    .ellipsize(gtk4::pango::EllipsizeMode::End)
+                    .max_width_chars(20)
+                    .vexpand(true)
+                    .build(),
+            ),
+            app_controller,
+        }
     }
 
     pub fn get_box(&self) -> Box {
@@ -28,6 +43,9 @@ impl UiLauncher {
         main_box.append(&left_box);
         main_box.append(&right_box);
 
+        self.app_controller
+            .stack
+            .add_named(&main_box, Some(LAUNCHER_STACK));
         main_box
     }
 
@@ -56,15 +74,23 @@ impl UiLauncher {
             label.set_label(game.name());
         });
 
-        let store = self.build_list_view_model();
-        let selection = SingleSelection::new(Some(store));
+        let store = self.app_controller.build_list_view_store();
+        if store.n_items() > 0 {
+            if let Some(obj) = store.item(0) {
+                let obj = obj.downcast::<BoxedAnyObject>().unwrap();
+                let game = obj.borrow::<Game>();
+                self.title.set_text(game.name());
+            }
+        }
 
-        selection.connect_selected_notify(|sel| {
+        let selection = SingleSelection::new(Some(store.clone()));
+        let title = self.title.clone();
+        selection.connect_selected_notify(move |sel| {
             if let Some(obj) = sel.selected_item() {
                 let obj = obj.downcast::<BoxedAnyObject>().unwrap();
                 let game = obj.borrow::<Game>();
 
-                println!("selected {}", game.name());
+                title.set_text(game.name());
             }
         });
 
@@ -92,14 +118,6 @@ impl UiLauncher {
             .halign(gtk4::Align::End)
             .build();
 
-        let game_title = Label::builder()
-            .label("Game TitleGame TitleGame TitleGame Title")
-            .css_classes(["game-title"])
-            .ellipsize(gtk4::pango::EllipsizeMode::End)
-            .max_width_chars(20)
-            .vexpand(true)
-            .build();
-
         let launch_btn = Button::builder()
             .label("Launch")
             .css_classes(["launch-button", "bg-blue", "secondary-font-size"])
@@ -114,41 +132,17 @@ impl UiLauncher {
             .css_classes(["settings-button", "bg-blue", "secondary-font-size"])
             .build();
 
-        let stack = self.stack.clone();
+        let ac_cloned = self.app_controller.clone();
         settings_btn.connect_clicked(move |_| {
-            stack.set_visible_child_name(ADD_GAME_FORM_STACK);
+            ac_cloned.stack.set_visible_child_name(ADD_GAME_FORM_STACK);
         });
 
         button_box.append(&launch_btn);
         button_box.append(&settings_btn);
 
-        right_box.append(&game_title);
+        right_box.append(self.title.as_ref());
         right_box.append(&button_box);
 
         right_box
-    }
-
-    fn build_list_view_model(&self) -> gtk4::gio::ListStore {
-        let store = gtk4::gio::ListStore::new::<BoxedAnyObject>();
-
-        if let Ok(games) = self.load_games() {
-            for g in games {
-                store.append(&BoxedAnyObject::new(g));
-            }
-        }
-
-        store
-    }
-
-    fn load_games(&self) -> Result<Vec<Game>, Error> {
-        let mut stmt = self.conn.prepare("SELECT * FROM games;")?;
-        let game_iter = stmt.query_map([], |row| Ok(Game::new(row.get(1)?, row.get(2)?)))?;
-
-        let mut games = vec![];
-        for g in game_iter {
-            games.push(g?);
-        }
-
-        Ok(games)
     }
 }

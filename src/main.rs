@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use gtk4::{
     Application, ApplicationWindow, CssProvider, HeaderBar,
     gio::prelude::{ApplicationExt, ApplicationExtManual},
@@ -7,8 +9,7 @@ use gtk4::{
 
 use crate::{
     constants::*,
-    db::sqlite_init,
-    ui::{create_game::ui_add_game_form, launcher::UiLauncher},
+    ui::{AppController, create_game::UiAddGameForm, launcher::UiLauncher},
 };
 
 mod constants;
@@ -16,15 +17,6 @@ mod db;
 mod ui;
 
 fn main() -> glib::ExitCode {
-    let conn = match sqlite_init() {
-        Ok(c) => c,
-        Err(e) => {
-            println!("Error connecting to game database: {}", e.to_string());
-            return glib::ExitCode::FAILURE;
-        }
-    };
-    let conn = std::rc::Rc::new(conn);
-
     let app = Application::builder()
         .application_id("org.example.VnLauncher")
         .build();
@@ -42,17 +34,13 @@ fn main() -> glib::ExitCode {
 
         let header_bar = HeaderBar::builder().show_title_buttons(true).build();
 
-        let stack = gtk4::Stack::new();
-        let stack = std::rc::Rc::new(stack);
+        let app_controller = Rc::new(AppController::new());
+        let _ = UiLauncher::new(app_controller.clone()).get_box();
+        let _ = UiAddGameForm::new(app_controller.clone()).get_box();
 
-        let create_game_form = ui_add_game_form(stack.clone(), conn.clone());
-        let launcher = UiLauncher::new(stack.clone(), conn.clone()).get_box();
+        app_controller.stack.set_visible_child_name(LAUNCHER_STACK);
 
-        stack.add_named(&launcher, Some(LAUNCHER_STACK));
-        stack.add_named(&create_game_form, Some(ADD_GAME_FORM_STACK));
-        stack.set_visible_child_name("launcher");
-
-        window.set_child(Some(stack.as_ref()));
+        window.set_child(Some(&app_controller.stack));
         window.set_titlebar(Some(&header_bar));
 
         window.present();
