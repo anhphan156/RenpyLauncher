@@ -1,3 +1,4 @@
+use super::super::constants::*;
 use super::super::db::game::Game;
 use std::rc::Rc;
 
@@ -48,7 +49,7 @@ pub fn ui_add_game_form(stack: Rc<Stack>, conn: Rc<rusqlite::Connection>) -> Box
 
     let stack_cloned = stack.clone();
     btn_back.connect_clicked(move |_| {
-        stack_cloned.set_visible_child_name("launcher");
+        stack_cloned.set_visible_child_name(LAUNCHER_STACK);
     });
 
     let stack_cloned = stack.clone();
@@ -57,7 +58,7 @@ pub fn ui_add_game_form(stack: Rc<Stack>, conn: Rc<rusqlite::Connection>) -> Box
         let path = txt_path.text().to_string();
         let game = Game::new(name, path);
         match game.save(conn.as_ref()) {
-            Ok(_) => stack_cloned.set_visible_child_name("launcher"),
+            Ok(_) => stack_cloned.set_visible_child_name(LAUNCHER_STACK),
             Err(e) => println!("{}", e),
         }
     });

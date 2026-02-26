@@ -18,4 +18,8 @@ impl Game {
             (&self.name, &self.path),
         )
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }

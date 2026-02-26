@@ -4,6 +4,12 @@ headerbar box {
 	box-shadow: none;
 }
 
+.left-box {
+	background: #33333399;
+	border: none;
+	box-shadow: none;
+}
+
 .launcher-background {
     background-image: url("default-background.png");
 	background-size: cover;

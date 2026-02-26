@@ -6,10 +6,12 @@ use gtk4::{
 };
 
 use crate::{
+    constants::*,
     db::sqlite_init,
-    ui::{create_game::ui_add_game_form, launcher::ui_launcher},
+    ui::{create_game::ui_add_game_form, launcher::UiLauncher},
 };
 
+mod constants;
 mod db;
 mod ui;
 
@@ -44,10 +46,10 @@ fn main() -> glib::ExitCode {
         let stack = std::rc::Rc::new(stack);
 
         let create_game_form = ui_add_game_form(stack.clone(), conn.clone());
-        let launcher = ui_launcher(stack.clone());
+        let launcher = UiLauncher::new(stack.clone(), conn.clone()).get_box();
 
-        stack.add_named(&launcher, Some("launcher"));
-        stack.add_named(&create_game_form, Some("add_game_form"));
+        stack.add_named(&launcher, Some(LAUNCHER_STACK));
+        stack.add_named(&create_game_form, Some(ADD_GAME_FORM_STACK));
         stack.set_visible_child_name("launcher");
 
         window.set_child(Some(stack.as_ref()));
