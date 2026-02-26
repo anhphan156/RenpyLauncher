@@ -22,4 +22,7 @@ impl Game {
     pub fn name(&self) -> &str {
         &self.name
     }
+    pub fn path(&self) -> &str {
+        &self.path
+    }
 }

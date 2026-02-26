@@ -4,7 +4,7 @@ use gtk4::{
     glib::{BoxedAnyObject, object::Cast},
     prelude::{BoxExt, ButtonExt, ListItemExt},
 };
-use std::rc::Rc;
+use std::{cell::RefCell, process::Command, rc::Rc};
 
 use crate::{
     constants::{ADD_GAME_FORM_STACK, LAUNCHER_STACK},
@@ -13,14 +13,15 @@ use crate::{
 };
 
 pub struct UiLauncher {
-    title: Rc<Label>,
+    current_title: Rc<Label>,
+    current_exe: Rc<RefCell<String>>,
     app_controller: Rc<AppController>,
 }
 
 impl UiLauncher {
     pub fn new(app_controller: Rc<AppController>) -> UiLauncher {
         UiLauncher {
-            title: Rc::new(
+            current_title: Rc::new(
                 Label::builder()
                     .label("Game Title")
                     .css_classes(["game-title"])
@@ -30,6 +31,7 @@ impl UiLauncher {
                     .build(),
             ),
             app_controller,
+            current_exe: Rc::new(RefCell::new(String::from(""))),
         }
     }
 
@@ -79,18 +81,23 @@ impl UiLauncher {
             if let Some(obj) = store.item(0) {
                 let obj = obj.downcast::<BoxedAnyObject>().unwrap();
                 let game = obj.borrow::<Game>();
-                self.title.set_text(game.name());
+                self.current_title.set_text(game.name());
+                self.current_exe.borrow_mut().push_str(game.path());
             }
         }
 
         let selection = SingleSelection::new(Some(store.clone()));
-        let title = self.title.clone();
+        let title = self.current_title.clone();
+        let exe = self.current_exe.clone();
         selection.connect_selected_notify(move |sel| {
             if let Some(obj) = sel.selected_item() {
                 let obj = obj.downcast::<BoxedAnyObject>().unwrap();
                 let game = obj.borrow::<Game>();
 
                 title.set_text(game.name());
+                let mut exe = exe.borrow_mut();
+                exe.clear();
+                exe.push_str(game.path());
             }
         });
 
@@ -123,8 +130,13 @@ impl UiLauncher {
             .css_classes(["launch-button", "bg-blue", "secondary-font-size"])
             .build();
 
-        launch_btn.connect_clicked(|_| {
-            eprintln!("Oh yeah baby click harder!");
+        let exe = self.current_exe.clone();
+        launch_btn.connect_clicked(move |_| {
+            let path = exe.borrow().clone();
+            Command::new("sh")
+                .arg(path)
+                .spawn()
+                .expect("Failed to spawn game");
         });
 
         let settings_btn = Button::builder()
@@ -140,7 +152,7 @@ impl UiLauncher {
         button_box.append(&launch_btn);
         button_box.append(&settings_btn);
 
-        right_box.append(self.title.as_ref());
+        right_box.append(self.current_title.as_ref());
         right_box.append(&button_box);
 
         right_box
