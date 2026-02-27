@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::db::{game::Game, sqlite_init};
 use gtk4::{Stack, gio::ListStore, glib::BoxedAnyObject};
 use rusqlite::{Connection, Error};
@@ -8,6 +10,8 @@ pub mod launcher;
 pub struct AppController {
     pub stack: Stack,
     pub conn: Connection,
+    pub tx: Arc<async_channel::Sender<String>>,
+    pub rx: Arc<async_channel::Receiver<String>>,
     store: ListStore,
 }
 
@@ -19,10 +23,15 @@ impl AppController {
                 panic!("Error connecting to game database: {}", e.to_string());
             }
         };
+
+        let (tx, rx) = async_channel::unbounded::<String>();
+
         AppController {
             stack: Stack::new(),
             conn,
             store: ListStore::new::<BoxedAnyObject>(),
+            tx: Arc::new(tx),
+            rx: Arc::new(rx),
         }
     }
 

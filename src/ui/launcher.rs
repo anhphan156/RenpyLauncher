@@ -7,7 +7,7 @@ use gtk4::{
 use std::{cell::RefCell, process::Command, rc::Rc};
 
 use crate::{
-    constants::{ADD_GAME_FORM_STACK, LAUNCHER_STACK},
+    constants::{ADD_GAME_FORM_STACK, LAUNCHER_STACK, WAITING_STACK},
     db::game::Game,
     ui::AppController,
 };
@@ -41,13 +41,26 @@ impl UiLauncher {
             .build();
         let left_box = self.left_box();
         let right_box = self.right_box();
+        let waiting_box = self.configure_waiting_box();
 
         main_box.append(&left_box);
         main_box.append(&right_box);
 
+        let ac_cloned = self.app_controller.clone();
+        let rx = ac_cloned.rx.clone();
+        gtk4::glib::MainContext::default().spawn_local(async move {
+            while let Ok(msg) = rx.recv().await {
+                println!("msg received: {}", msg);
+                ac_cloned.stack.set_visible_child_name(LAUNCHER_STACK);
+            }
+        });
+
         self.app_controller
             .stack
             .add_named(&main_box, Some(LAUNCHER_STACK));
+        self.app_controller
+            .stack
+            .add_named(&waiting_box, Some(WAITING_STACK));
         main_box
     }
 
@@ -131,12 +144,21 @@ impl UiLauncher {
             .build();
 
         let exe = self.current_exe.clone();
+        let ac_cloned = self.app_controller.clone();
+        let tx = ac_cloned.tx.clone();
         launch_btn.connect_clicked(move |_| {
             let path = exe.borrow().clone();
-            Command::new("sh")
-                .arg(path)
-                .spawn()
-                .expect("Failed to spawn game");
+            ac_cloned.stack.set_visible_child_name(WAITING_STACK);
+            let tx = tx.clone();
+            std::thread::spawn(move || {
+                let mut child = Command::new("sh")
+                    .arg(path)
+                    .spawn()
+                    .expect("Failed to spawn game");
+
+                let status = child.wait().unwrap();
+                let _ = tx.send_blocking(status.to_string());
+            });
         });
 
         let settings_btn = Button::builder()
@@ -156,5 +178,20 @@ impl UiLauncher {
         right_box.append(&button_box);
 
         right_box
+    }
+
+    fn configure_waiting_box(&self) -> Box {
+        let lbl = Label::builder()
+            .label("Game is running!")
+            .css_classes(["primary-font-size"])
+            .build();
+        let main_box = Box::builder()
+            .hexpand(true)
+            .vexpand(true)
+            .halign(gtk4::Align::Center)
+            .valign(gtk4::Align::Center)
+            .build();
+        main_box.append(&lbl);
+        main_box
     }
 }
