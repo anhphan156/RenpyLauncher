@@ -41,7 +41,7 @@ impl UiLauncher {
             .build();
         let left_box = self.left_box();
         let right_box = self.right_box();
-        let waiting_box = self.configure_waiting_box();
+        let waiting_box = self.waiting_box();
 
         main_box.append(&left_box);
         main_box.append(&right_box);
@@ -145,14 +145,13 @@ impl UiLauncher {
 
         let exe = self.current_exe.clone();
         let ac_cloned = self.app_controller.clone();
-        let tx = ac_cloned.tx.clone();
         launch_btn.connect_clicked(move |_| {
-            let path = exe.borrow().clone();
+            let exe = exe.borrow().clone();
             ac_cloned.stack.set_visible_child_name(WAITING_STACK);
-            let tx = tx.clone();
+            let tx = ac_cloned.tx.clone();
             std::thread::spawn(move || {
                 let mut child = Command::new("sh")
-                    .arg(path)
+                    .arg(exe)
                     .spawn()
                     .expect("Failed to spawn game");
 
@@ -180,7 +179,7 @@ impl UiLauncher {
         right_box
     }
 
-    fn configure_waiting_box(&self) -> Box {
+    fn waiting_box(&self) -> Box {
         let lbl = Label::builder()
             .label("Game is running!")
             .css_classes(["primary-font-size"])

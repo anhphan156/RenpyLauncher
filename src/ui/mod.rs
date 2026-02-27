@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::db::{game::Game, sqlite_init};
 use gtk4::{Stack, gio::ListStore, glib::BoxedAnyObject};
 use rusqlite::{Connection, Error};
@@ -10,8 +8,8 @@ pub mod launcher;
 pub struct AppController {
     pub stack: Stack,
     pub conn: Connection,
-    pub tx: Arc<async_channel::Sender<String>>,
-    pub rx: Arc<async_channel::Receiver<String>>,
+    pub tx: async_channel::Sender<String>,
+    pub rx: async_channel::Receiver<String>,
     store: ListStore,
 }
 
@@ -30,8 +28,8 @@ impl AppController {
             stack: Stack::new(),
             conn,
             store: ListStore::new::<BoxedAnyObject>(),
-            tx: Arc::new(tx),
-            rx: Arc::new(rx),
+            tx,
+            rx,
         }
     }
 
